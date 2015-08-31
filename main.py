@@ -33,7 +33,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtOpenGL import *
 import os, sys
 
-import byml, fmdl, sarc, yaz0
+import byml, fmdl, sarc, yaz0, ftex
 
 import datetime
 now = datetime.datetime.now
@@ -71,6 +71,20 @@ def IntEdit(v,cb):
 
 # renames the settings names, not ported to mk8 yet
 def SettingName(oldName):
+    if oldName == 'Multi2P':
+        return '2-Player Related'
+    if oldName == 'Multi4P':
+        return '4-Player Related'    
+    if oldName == 'WiFi':
+        return 'WiFi Related'
+    if oldName == 'WiFi2P':
+        return '2-Player WiFi Related'    
+    if oldName == 'ObjId':
+        return 'Object ID'
+    if oldName == 'UnitIdNum':
+        return 'Unit Number'
+    if oldName == 'TopView':
+        return 'Camera Related??'        
     return oldName
 
 class SettingsWidget(QtGui.QWidget):
