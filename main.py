@@ -33,7 +33,7 @@ from PyQt4 import QtGui, QtCore
 from PyQt4.QtOpenGL import *
 import os, sys
 
-import byml, fmdl, sarc, yaz0, ftex
+import byml, fmdl, sarc, yaz0
 
 import datetime
 now = datetime.datetime.now
@@ -115,6 +115,11 @@ class SettingsWidget(QtGui.QWidget):
                 modelNameMapping[id] = resName
         
         self.current = obj
+
+        self.config_lbl = QtGui.QLabel(obj.fileName) # int to a string
+        self.config_lbl.setStyleSheet('font-size: 16px')
+        self.layout.addWidget(self.config_lbl)
+
         self.config_lbl = QtGui.QLabel(str(obj.data['ObjId'])) # int to a string
         self.config_lbl.setStyleSheet('font-size: 16px')
         self.layout.addWidget(self.config_lbl)
@@ -223,12 +228,14 @@ class SettingsWidget(QtGui.QWidget):
             self.current.updateModel()
 
 class LevelObject:
-    def __init__(self,obj,dlist):
+    def __init__(self,obj,dlist,modelName):
         global color
         self.data = obj
         self.color = (color/100/10.0,((color/10)%10)/10.0,(color%10)/10.0)
         color+=1
         self.list = dlist
+
+        self.fileName = modelName
         
         trans = obj['Translate']
         self.posx = trans['X']/100
@@ -351,7 +358,7 @@ class LevelWidget(QGLWidget):
         if not modelName in self.cache:
             self.cache[modelName] = self.loadModel(modelName)
             #self.cache[modelName] = self.loadcourseModel(modelName)
-        lobj = LevelObject(obj,self.cache[modelName])
+        lobj = LevelObject(obj,self.cache[modelName],modelName)
         self.objects.append(lobj)
 
         # trying to duplicate the function
@@ -485,51 +492,6 @@ class LevelWidget(QGLWidget):
         self.mousey = event.y()
         self.updateGL()
 
-class ChooseLevelDialog(QtGui.QDialog):
-    def __init__(self,worldList):
-        QtGui.QDialog.__init__(self)
-        self.setWindowTitle('Choose Level')
-        self.currentLevel = None
-
-        tree = QtGui.QTreeWidget()
-        tree.setHeaderHidden(True)
-        tree.currentItemChanged.connect(self.handleItemChange)
-        tree.itemActivated.connect(self.handleItemActivated)
-
-        self.buttonBox = QtGui.QDialogButtonBox(QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Cancel)
-        self.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
-
-        btn = self.buttonBox.addButton("Other file...",QtGui.QDialogButtonBox.ActionRole)
-        btn.clicked.connect(self.openFile)
-
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
-
-        layout = QtGui.QVBoxLayout()
-        layout.addWidget(tree)
-        layout.addWidget(self.buttonBox)
-        self.setLayout(layout)
-
-        self.setMinimumWidth(100)
-        self.setMinimumHeight(100)
-
-    def openFile(self):
-        fn = QtGui.QFileDialog.getOpenFileName(self,'Open Level','course_muunt.byaml','Level Archives (*.byaml)')
-        self.currentLevel = os.path.basename(str(fn))[:-8]
-        if self.currentLevel:
-            self.accept()
-
-    def handleItemChange(self,current,previous):
-        self.currentLevel = current.data(0,QtCore.Qt.UserRole).toString()
-        if not self.currentLevel:
-            self.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(False)
-        else:
-            self.buttonBox.button(QtGui.QDialogButtonBox.Ok).setEnabled(True)
-
-    def handleItemActivated(self,item,column):
-        self.currentLevel = item.data(0,QtCore.Qt.UserRole).toString()
-        if self.currentLevel:
-            self.accept()
 
 class MainWindow(QtGui.QMainWindow):
 
@@ -537,18 +499,19 @@ class MainWindow(QtGui.QMainWindow):
     
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
-        self.setWindowTitle("mk8 hack")
+        self.setWindowTitle("MK8-Editor")
         self.setGeometry(100,100,1080,720)
 
         self.setupMenu()
         
         self.qsettings = QtCore.QSettings("MrRean / RoadrunnerWMC","MK8 YAML Editor")
+        self.restoreGeometry(self.qsettings.value("geometry").toByteArray())
+        self.restoreState(self.qsettings.value("windowState").toByteArray())
+
         self.gamePath = self.qsettings.value('gamePath').toPyObject()
         if not self.isValidGameFolder(self.gamePath):
             self.changeGamePath(True)
 
-        self.loadStageList()
-        self.levelSelect = ChooseLevelDialog(self.worldList)
         
         self.settings = SettingsWidget(self)
         self.setupGLScene()
@@ -559,6 +522,32 @@ class MainWindow(QtGui.QMainWindow):
         self.timer.start(30)
 
         self.show()
+
+
+    def closeEvent(self, event):
+        self.qsettings.setValue("geometry", self.saveGeometry())
+        self.qsettings.setValue("windowState", self.saveState())
+
+    def setupMenu(self):
+        self.openAction = QtGui.QAction("Open",self)
+        self.openAction.setShortcut("Ctrl+O")
+        self.openAction.triggered.connect(self.showLevelDialog)
+
+        self.saveAction = QtGui.QAction("Save",self)
+        self.saveAction.setShortcut("Ctrl+S")
+        self.saveAction.triggered.connect(self.saveLevel)
+        self.saveAction.setEnabled(False)
+
+        pathAction = QtGui.QAction("Change Game Path",self)
+        pathAction.setShortcut("Ctrl+G")
+        pathAction.triggered.connect(self.changeGamePath)
+        
+        self.menubar = self.menuBar()
+        fileMenu = self.menubar.addMenu("File")
+        fileMenu.addAction(self.openAction)
+        fileMenu.addAction(self.saveAction)
+        settingsMenu = self.menubar.addMenu("Settings")
+        settingsMenu.addAction(pathAction)
 
     def changeGamePath(self,disable=False):
         path = self.askGamePath()
@@ -591,10 +580,11 @@ class MainWindow(QtGui.QMainWindow):
         
     # edit this to open different types of stages
     def showLevelDialog(self):
-        if self.levelSelect.exec_():
-            with open(self.levelSelect.currentLevel+'nt.byaml', 'rb') as f: # awful hack, it tries to take out the 'nt' at the end of the filename for some reason..maybe remove the currentlevel??
-                self.levelData = byml.BYML(f.read(), True)
-            self.loadLevel(self.levelData.rootNode.subNodes())
+        byamlPath = QtGui.QFileDialog.getOpenFileName(self, 'Open Level','course_muunt.byaml','Level Archives (*.byaml)');
+        print "path is: "+byamlPath
+        with open(byamlPath, 'rb') as f:
+            self.levelData = byml.BYML(f.read(), True)
+        self.loadLevel(self.levelData.rootNode.subNodes())
             
     def loadLevel(self,levelData):
 
@@ -636,27 +626,6 @@ class MainWindow(QtGui.QMainWindow):
         modelName = modelNameMapping[int(modelName)]
         self.glWidget.addObject(obj,modelName)
 
-
-    def setupMenu(self):
-        self.openAction = QtGui.QAction("Open",self)
-        self.openAction.setShortcut("Ctrl+O")
-        self.openAction.triggered.connect(self.showLevelDialog)
-
-        self.saveAction = QtGui.QAction("Save",self)
-        self.saveAction.setShortcut("Ctrl+S")
-        self.saveAction.triggered.connect(self.saveLevel)
-        self.saveAction.setEnabled(False)
-
-        pathAction = QtGui.QAction("Change Game Path",self)
-        pathAction.setShortcut("Ctrl+G")
-        pathAction.triggered.connect(self.changeGamePath)
-        
-        self.menubar = self.menuBar()
-        fileMenu = self.menubar.addMenu("File")
-        fileMenu.addAction(self.openAction)
-        fileMenu.addAction(self.saveAction)
-        settingsMenu = self.menubar.addMenu("Settings")
-        settingsMenu.addAction(pathAction)
 
     def saveLevel(self):
         fn = QtGui.QFileDialog.getSaveFileName(self,'Save Level','darp','Unpacked Levels (*.byaml)')
