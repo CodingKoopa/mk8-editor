@@ -580,7 +580,7 @@ class MainWindow(QtGui.QMainWindow):
         
     # edit this to open different types of stages
     def showLevelDialog(self):
-        byamlPath = QtGui.QFileDialog.getOpenFileName(self, 'Open Level','course_muunt.byaml','Level Archives (*.byaml)');
+        byamlPath = QtGui.QFileDialog.getOpenFileName(self, 'Open Level','course_muunt.byaml','Level Archive (*.byaml)');
         print "path is: "+byamlPath
         with open(byamlPath, 'rb') as f:
             self.levelData = byml.BYML(f.read(), True)
@@ -608,8 +608,9 @@ class MainWindow(QtGui.QMainWindow):
         progress.setMinimumDuration(0)
         progress.setRange(0,amount)
         progress.setWindowModality(QtCore.Qt.WindowModal)
+        
         progress.setWindowTitle('Loading...')
-        i = 0
+        i = 1
         for obj in levelData['Obj'].subNodes():
             progress.setLabelText('Loading object '+str(i+1)+'/'+str(amount))
             print "loading object "+str(obj)
@@ -628,7 +629,7 @@ class MainWindow(QtGui.QMainWindow):
 
 
     def saveLevel(self):
-        fn = QtGui.QFileDialog.getSaveFileName(self,'Save Level','darp','Unpacked Levels (*.byaml)')
+        fn = QtGui.QFileDialog.getSaveFileName(self,'Save Level','course_muunt.byaml','Level Archive (*.byaml)')
         with open(fn,'wb') as f:
             self.levelData.saveChanges()
             f.write(self.levelData.data)
