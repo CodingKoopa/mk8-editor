@@ -612,7 +612,7 @@ class MainWindow(QtGui.QMainWindow):
         progress.setWindowTitle('Loading...')
         i = 1
         for obj in levelData['Obj'].subNodes():
-            progress.setLabelText('Loading object '+str(i+1)+'/'+str(amount))
+            progress.setLabelText('Loading object '+str(i)+'/'+str(amount))
             print "loading object "+str(obj)
             progress.setValue(i)
             self.loadObject(obj)
@@ -620,7 +620,7 @@ class MainWindow(QtGui.QMainWindow):
             i+=1  
         self.saveAction.setEnabled(True)
         print now()-stime
-        print 'NUMBER OF OBJECTS ARE '+str(amount)
+        print str(amount)+' Objects loaded'
 
     def loadObject(self,obj):
         modelName = obj['ObjId']
