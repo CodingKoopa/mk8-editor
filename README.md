@@ -1,6 +1,8 @@
 # MK8-Editor
 An editor for the WiiU game, Mario Kart 8. It currently only edits course BYAMLs, which contain info about the objects in courses.
 
+**IMPORTANT: I did not make this editor. It was originally a fork of [Kinnay's SM3DW Editor](https://github.com/Kinnay/SM3DW-Level-Editor), which was then modded by Mr. Rean among other people to edit MK8. I, TheKoopaKingdom, just made tweaks to Mr. Rean's editor, whose Github has been nuked.**
+
 ## Setup
 This requires the following:
  - **A dump of Mario Kart 8's files** - This is what MK8-Editor operates on, you can get them with [ddd](https://gbatemp.net/threads/ddd-wiiu-title-dumper.418492/). ddd is a Wii U application for the [Homebrew Launcher](https://gbatemp.net/threads/homebrew-launcher-for-wiiu.416905/). You can use it by extracting ddd and the Homebrew Launcher's files to an SD card, putting that in your Wii U, going to http://loadiine.ovh/, and selecting Homebrew Launcher RC1.
